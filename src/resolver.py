@@ -34,11 +34,27 @@ def getServerIpAndInfo(searchRoomID):
     finally:
         zeroconf.close()
 
-def getAllServersInNetwork():
-    zeroconf = Zeroconf()
+class MyListener(ServiceListener):
+    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+        print(f"Service {name} updated")
 
+    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+        print(f"Service {name} removed")
+
+    def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+        info = zc.get_service_info(type_, name)
+        print(f"Service {name} added, service info: {info}")
+
+def getAllServersInNetwork():
+
+
+
+    zeroconf = Zeroconf()
+    listener = MyListener()
+    browser = ServiceBrowser(zeroconf, "_pyChat._tcp.local.", listener)
+    browser.cancel()
     try:
-        servers = zeroconf.se
+        input("Press enter to exit...\n\n")
     finally:
         zeroconf.close()
     
