@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     info = ServiceInfo(
         "_pyChat._tcp.local.",
-        "65486ads0IOJDasd-asdasdasd-asdasd._pyChat._tcp.local.",
+        roomID+"._pyChat._tcp.local.",
         addresses= getAllIps(),
         port=80,
         properties=desc,
