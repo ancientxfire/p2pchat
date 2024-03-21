@@ -1,78 +1,24 @@
-import json
 import logging
 import sys
-import socket
-import time
 
-import struct
-from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-
-TYPE = "_pyChat._tcp.local."
+from services.zeroconfServices import *
+from services.loadingAnimService import TermLoading
 
 
-
-def convDict(x):
-    y = {}
- 
-    # Converting
-    for key, value in x.items():
-        y[key.decode("utf-8")] = value.decode("utf-8")
-    return y
-def getServerIpAndInfo(searchRoomID):
-    zeroconf = Zeroconf()
-
-    try:
-        service = zeroconf.get_service_info(TYPE, searchRoomID + '.' + TYPE)
-        if service is None:
-            return None
-        propertys = service.properties
-        ipAdresses = []
-        for i in service.addresses:
-            
-            ipAdresses.append('.'.join(map(str, struct.unpack('BBBB',i))))
-        return {"roomID":searchRoomID,"IPs":ipAdresses, "properties":convDict(propertys), }
-    finally:
-        zeroconf.close()
-        
-
-class MyListener(ServiceListener):
-    services = []
-    def update_service(self, zc: Zeroconf, type_: str, name: str, ) -> None:
-        #print(f"Service {name} updated")
-        info = zc.get_service_info(type_, name)
-        self.services.remove(item for item in self.services if item["name"] == name)
-        self.services.append({"name":name,"info":info})
-        
-
-    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        #print(f"Service {name} removed")
-        self.services.remove(item for item in self.services if item["name"] == name)
-
-    def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        info = zc.get_service_info(type_, name)
-        #print(f"Service {name} added, service info: {info}")
-        self.services.append({"name":name,"info":info})
-
-def getAllServersInNetwork():
-    services = []
-
-    try:
-        zeroconf = Zeroconf()
-        listener = MyListener()
-        browser = ServiceBrowser(zeroconf, "_pyChat._tcp.local.", listener)
-        time.sleep(3)
-        browser.cancel()
-        
-        services = listener.services
-       
-    finally:
-        zeroconf.close()
-        return services
     
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) > 1:
         assert sys.argv[1:] == ['--debug']
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
-    #print(getServerIpAndInfo("MKGC7R"))
-    print(getAllServersInNetwork())
+    print(getServerIpAndInfo("EECA9W"))
+    animation: TermLoading = TermLoading()
+    animation.show('searching...', finish_message='Finished!✅', failed_message='Failed!❌😨😨')
+ 
+    allServers = getAllServersInNetwork()
+    animation.finished = True
+    print("allServers found:")
+    for i in allServers:
+        info = getServerIpAndInfo(i["name"].replace("._pyChat._tcp.local.", ""))
+        print(f"Room ID: {info["roomID"]} IPs: {", ".join(info["IPs"])}")
+       
