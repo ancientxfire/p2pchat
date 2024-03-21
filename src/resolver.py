@@ -37,21 +37,24 @@ def getServerIpAndInfo(searchRoomID):
 
 class MyListener(ServiceListener):
     services = []
-    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        print(f"Service {name} updated")
-        self.services.r
+    def update_service(self, zc: Zeroconf, type_: str, name: str, ) -> None:
+        #print(f"Service {name} updated")
+        info = zc.get_service_info(type_, name)
+        self.services.remove(item for item in self.services if item["name"] == name)
+        self.services.append({"name":name,"info":info})
         
 
     def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        print(f"Service {name} removed")
+        #print(f"Service {name} removed")
+        self.services.remove(item for item in self.services if item["name"] == name)
 
     def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         info = zc.get_service_info(type_, name)
-        print(f"Service {name} added, service info: {info}")
+        #print(f"Service {name} added, service info: {info}")
         self.services.append({"name":name,"info":info})
 
 def getAllServersInNetwork():
-
+    services = []
 
     try:
         zeroconf = Zeroconf()
@@ -59,11 +62,12 @@ def getAllServersInNetwork():
         browser = ServiceBrowser(zeroconf, "_pyChat._tcp.local.", listener)
         time.sleep(3)
         browser.cancel()
-        print(listener.services)
-
+        
+        services = listener.services
        
     finally:
         zeroconf.close()
+        return services
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -71,4 +75,4 @@ if __name__ == '__main__':
         assert sys.argv[1:] == ['--debug']
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
     #print(getServerIpAndInfo("MKGC7R"))
-    getAllServersInNetwork()
+    print(getAllServersInNetwork())

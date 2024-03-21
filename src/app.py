@@ -41,7 +41,7 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
     roomID = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    desc = {'username': 'matkop','roomID':roomID}
+    desc = {'username': 'matkop','roomID':roomID, "passwwordProtected":False}
     print("Registering service: "+roomID+"._pyChat._tcp.local.")
     info = ServiceInfo(
         "_pyChat._tcp.local.",
