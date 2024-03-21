@@ -3,7 +3,7 @@ import logging
 import sys
 import socket
 import time
-import services.loadingAnimService
+import modules.loadingAnimService
 import struct
 from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
 
