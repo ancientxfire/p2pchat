@@ -1,6 +1,7 @@
 import logging
 import sys
 
+from modules.userChoice import userChoiceOne
 from modules.zeroconfServices import *
 from modules.loadingAnimService import TermLoading
 
@@ -17,26 +18,15 @@ def askUserForRoom():
     allServersResolved = []
     animation.finished = True
     if allServers != []:
-        print("Avalable Rooms:\n")
+        userOptions = []
+        
         for itt, i in enumerate(allServers):
             info = getServerIpAndInfo(i["name"].replace("._pyChat._tcp.local.", ""))
             allServersResolved.append(info)
-            print(f"({itt}) {"🔒" if info["properties"]["passwordProtected"] else "🔓"} Room ID: {info["roomID"]} IPs: {", ".join(info["IPs"])}")
+            userOptions.append(f"{"🔒" if info["properties"]["passwordProtected"] else "🔓"} Room ID: {info["roomID"]} IPs: {", ".join(info["IPs"])}")
         
-        selectedRoom = None
-        
-        while selectedRoom == None:
-            try:
-                inputedVal = int(input("Choose a Room: "))
-                selectedRoom = allServersResolved[inputedVal]
-            except ValueError:
-                print("Please enter a valid number")
-            
-            except IndexError:
-                print("Please enter a number shown above")
-            except Exception as e:
-                print(e)
-        return selectedRoom
+        selectedRoomStr ,selectedIndex = userChoiceOne(userOptions,"Avalable Rooms:")
+        return allServersResolved[selectedIndex]
     else:
         print("No Rooms available")
         return None

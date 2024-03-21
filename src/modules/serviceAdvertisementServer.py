@@ -9,7 +9,7 @@ from modules.argParsService import Arguments
 from modules.ipServices import getAllIps
 
 
-def registerServiceAdvertisement(username,isPasswordProtected):
+def registerServiceAdvertisement(username,isPasswordProtected, roomID):
     
     args = Arguments().args
 
@@ -21,7 +21,7 @@ def registerServiceAdvertisement(username,isPasswordProtected):
         ip_version = IPVersion.V6Only
     else:
         ip_version = IPVersion.V4Only
-    roomID = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
     desc = {'username': username,'roomID':roomID, "passwordProtected":isPasswordProtected}
     print("Registering service: "+roomID+"._pyChat._tcp.local.")
     info = ServiceInfo(
@@ -34,7 +34,7 @@ def registerServiceAdvertisement(username,isPasswordProtected):
     )
 
     zeroconf = Zeroconf(ip_version=ip_version)
-    print("Registration of a service, press Ctrl-C to exit...")
+    
     zeroconf.register_service(info)
     try:
         while True:
