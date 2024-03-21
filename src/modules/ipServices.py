@@ -1,4 +1,5 @@
 import socket
+import struct
 
 
 EXCLUDED_IP_RANGES = ["172","100","127"]
@@ -11,3 +12,6 @@ def getAllIps():
             continue
         conv_ip_addresses.append(socket.inet_aton(adress))
     return conv_ip_addresses
+
+def ipBinaryToString(ipBin):
+    return '.'.join(map(str, struct.unpack('BBBB',ipBin)))

@@ -16,6 +16,7 @@ def runClient( forceRoomID: str = None, roomPassword: str =None):
         print("Error: Room invalid")
         return 
     print(roomData)
+    
     while True:
         time.sleep(1)
     

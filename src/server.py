@@ -23,9 +23,10 @@ def runServer():
         clientProc = multiprocessing.Process(target=runClient, args=[roomID])
         clientProc.start()
         subprocesses.append(clientProc)
-        
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
-        print("Keyboard Interrupt recived. Terminating...")
+        print("\nKeyboard Interrupt recived. Terminating...")
     except Exception as e:
         print(e)
     finally:

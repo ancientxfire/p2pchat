@@ -23,7 +23,7 @@ def askUserForRoom():
         for itt, i in enumerate(allServers):
             info = getServerIpAndInfo(i["name"].replace("._pyChat._tcp.local.", ""))
             allServersResolved.append(info)
-            userOptions.append(f"{"🔒" if info["properties"]["passwordProtected"] else "🔓"} Room ID: {info["roomID"]} IPs: {", ".join(info["IPs"])}")
+            userOptions.append(f"{chr(0x1F512) if info['properties']['passwordProtected'] else chr(0x1F513)} Room ID: {info['roomID']} IPs: {', '.join(info['IPs'])}")
         
         selectedRoomStr ,selectedIndex = userChoiceOne(userOptions,"Avalable Rooms:")
         return allServersResolved[selectedIndex]
