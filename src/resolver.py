@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 import socket
-
+import time
 
 import struct
 from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
@@ -33,10 +33,14 @@ def getServerIpAndInfo(searchRoomID):
         return {"roomID":searchRoomID,"IPs":ipAdresses, "properties":convDict(propertys), }
     finally:
         zeroconf.close()
+        
 
 class MyListener(ServiceListener):
+    services = []
     def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         print(f"Service {name} updated")
+        self.services.r
+        
 
     def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         print(f"Service {name} removed")
@@ -44,17 +48,20 @@ class MyListener(ServiceListener):
     def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         info = zc.get_service_info(type_, name)
         print(f"Service {name} added, service info: {info}")
+        self.services.append({"name":name,"info":info})
 
 def getAllServersInNetwork():
 
 
-
-    zeroconf = Zeroconf()
-    listener = MyListener()
-    browser = ServiceBrowser(zeroconf, "_pyChat._tcp.local.", listener)
-    browser.cancel()
     try:
-        input("Press enter to exit...\n\n")
+        zeroconf = Zeroconf()
+        listener = MyListener()
+        browser = ServiceBrowser(zeroconf, "_pyChat._tcp.local.", listener)
+        time.sleep(3)
+        browser.cancel()
+        print(listener.services)
+
+       
     finally:
         zeroconf.close()
     
@@ -63,4 +70,5 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         assert sys.argv[1:] == ['--debug']
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
-    print(getServerIpAndInfo("FVIO13"))
+    #print(getServerIpAndInfo("MKGC7R"))
+    getAllServersInNetwork()
