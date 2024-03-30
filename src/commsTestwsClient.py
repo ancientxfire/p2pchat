@@ -1,68 +1,83 @@
 import asyncio
 import json
+from queue import Queue
+import threading
+import time
+from websockets.sync.client import connect
 import uuid
-import websockets
 import logging
-from pymitter import EventEmitter
-ee = EventEmitter()
 
-
+from chatGUI import runClientChatGUI
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("WS Client")
 
-
-    
-
+def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.Event,messageQueue:Queue,newMessageRecivedEvent:threading.Event):
+    try:
+        for message in websocket:
+            message = json.loads(message)
             
-async def init_client(wsURL:str, headers: dict):
-    logger.info("Starting websocket client")
-    
-    async for websocket in websockets.connect(uri=wsURL,logger=logger,extra_headers=headers):
+            
+            match message["type"]:
+                case "init":
+                    print(message)
+                case "message":
+                    newMessageRecivedEvent.set()
+                    messageQueue.put(message)
+                    print(f"{message["sender"]}: {message["message"]}")
+                case _:
+                    print(message)
+
+
+    except Exception as e:
+        logger.exception(e)
+    finally:
+        server_disconnected.set()
         
+
+def messageSendingLoop(websocket, extra_headers:dict, messageQueue:Queue,newMessageToSendEvent:threading.Event):
+    try:
+        welcomeMessageStr = "Hi Server"
+        message = {"message": welcomeMessageStr, "messageUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, welcomeMessageStr)), "uuid": str(extra_headers["UUID"]), "type": "init"}
+        websocket.send(json.dumps(message))
+        while True:
+            """ messageStr = input("Message: ") """
+            newMessageToSendEvent.wait()
+            messageStr = messageQueue.get()
+            message = {"message": messageStr, "messageUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, messageStr)), "uuid": str(extra_headers["UUID"]), "type": "message"}
+            websocket.send(json.dumps(message))
+    except Exception as e:
+        logger.exception(e)
+
+def runClientComms(wsURL:str, password:str, username:str):
+
+    extra_headers = {
+            "Authorization": "Password: " + password,
+            "Username": username,
+            "UUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, username))
+    }
+
+    with connect(wsURL, additional_headers=extra_headers) as websocket:
+        server_disconnected = threading.Event()
+        messageQueueRecived = Queue()
+        newMessageRecivedEvent = threading.Event()
+        messageQueueSend = Queue()
+        newMessageToSendEvent = threading.Event()
         try:
-            firstMessageStr = "Hi there!"
-            firstMessage = {"uuid": headers["UUID"], "type":"init", "message":"Hi there!", "messageUUID":str(uuid.uuid5(uuid.NAMESPACE_DNS, firstMessageStr))} 
-            print(json.dumps(firstMessage, indent=4))
-            await websocket.send(json.dumps(firstMessage))
+            receive_thread = threading.Thread(target=messageReceive, args=[websocket, extra_headers, server_disconnected,messageQueueRecived, newMessageRecivedEvent])
+            send_thread = threading.Thread(target=messageSendingLoop, args=[websocket, extra_headers,messageQueueSend, newMessageToSendEvent])
+            receive_thread.daemon = True
+            send_thread.daemon = True
+            receive_thread.start()
+            send_thread.start()
             
-            @ee.on("send_message")
-            async def send_message(msg):
-                messageToSend = {"uuid": headers["UUID"], "type":"message", "message":msg, "messageUUID":str(uuid.uuid5(uuid.NAMESPACE_DNS, msg))}
-                print(json.dumps(messageToSend))
-                await websocket.send(json.dumps(messageToSend))
-            
-            while True:
-                message = await websocket.recv()
-                print(message)
-        except websockets.ConnectionClosed:
-            continue
+            runClientChatGUI(username,server_disconnected,messageQueueRecived,messageQueueSend, newMessageRecivedEvent,newMessageToSendEvent)
         except Exception as e:
             logger.exception(e)
-            
-            
-
-def startClient(wsURL, password, username):
-    headers = {
-        "Authorization": "Password: "+password,
-        "Username": username,
-        "UUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, username))
-    }
-    try:
-        # run init_client and test func simultaneouslly
-        
-        asyncio.run(init_client(wsURL=wsURL, headers=headers))
-        run_client = asyncio.ensure_future(init_client(wsURL=wsURL, headers=headers))
-        event_loop = asyncio.get_event_loop()
-        event_loop.run_forever()
-    except Exception as e:
-        logger.exception(f"Exception in websocket server init: {e}")
-    finally:
-        run_client.cancel()
-        event_loop.close()
-
+        finally:
+            logger.info("Exiting Client")
 
 if __name__ == "__main__":
     wsURL = "ws://localhost:8765"
-    password= "mypass123"
-    username = "ancie"
-    startClient(wsURL=wsURL, password=password, username=username)
+    password = input("Enter Password or press enter if no Password is set: ")
+    username = input("Username: ")
+    runClientComms(wsURL=wsURL, password=password, username=username)

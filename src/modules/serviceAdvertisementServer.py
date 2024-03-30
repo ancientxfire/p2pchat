@@ -6,10 +6,9 @@ from time import sleep
 from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
 from modules.argParsService import Arguments
-from modules.ipServices import getAllIps
 
 
-def registerServiceAdvertisement(username,isPasswordProtected, roomID):
+def registerServiceAdvertisement(username,isPasswordProtected, roomID,ipAdress):
     
     args = Arguments().args
 
@@ -27,7 +26,7 @@ def registerServiceAdvertisement(username,isPasswordProtected, roomID):
     info = ServiceInfo(
         "_pyChat._tcp.local.",
         roomID+"._pyChat._tcp.local.",
-        addresses= getAllIps(),
+        addresses= [ipAdress],
         port=80,
         properties=desc,
         server="ash-2.local.",
