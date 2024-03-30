@@ -47,7 +47,6 @@ def runServer():
         serverProc.start()
         subprocesses.append(serverProc)
         # start websocket server in main process
-        
         runClient(forceRoomID=roomID, username=username, roomPassword="" if password is None else password,ip=ip)
         
         
