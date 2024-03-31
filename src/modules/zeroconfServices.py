@@ -6,10 +6,11 @@ import time
 import modules.loadingAnimService
 import struct
 from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-
-TYPE = "_pyChat._tcp.local."
-
-
+from constants import Config
+TYPE = Config.zeroconf.zeroconfProtocol
+logging.basicConfig(level=Config.loggingLevel, format=Config.loggingFormat)
+logger = logging.getLogger("zeroconfServices")
+logging.getLogger('zeroconf').setLevel(Config.loggingLevel)
 
 def convDict(x):
     y = {}
@@ -71,9 +72,10 @@ def getAllServersInNetwork(searchTime = 3):
         return services
     
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    
+    
     if len(sys.argv) > 1:
         assert sys.argv[1:] == ['--debug']
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        
     
     print(getAllServersInNetwork())

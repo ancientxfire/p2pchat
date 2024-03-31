@@ -3,11 +3,15 @@ from modules.serviceAdvertisementServer import *
 from modules.userChoice import userChoiceOne
 from resolver import askUserForRoom
 from server import runServer
+from constants import Config
 
-Arguments()
 
 if __name__ == '__main__':
     try:
+      
+        
+        # register cmd arguments and parse them
+        Arguments()
         args = Arguments().getArgs()
         if args.s == False and args.c == False:
             choice,choiceIndex = userChoiceOne(["Server","Client",])

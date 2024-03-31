@@ -1,15 +1,16 @@
 import asyncio
 from http import HTTPStatus
 import json
+import ssl
 from typing import Tuple
 import uuid
 import websockets
 import logging
 
 from websockets.legacy.server import HTTPResponse
-logging.basicConfig(level=logging.INFO)
+from constants import Config
+logging.basicConfig(level=Config.loggingLevel, format=Config.loggingFormat)
 logger = logging.getLogger("WS Server")
-
 
 
 
@@ -152,7 +153,8 @@ async def startWebSocketServer(password, wsAdressPort,wsAdress):
         if wsAdress == None:
             wsAdress = "localhost"
        
-        
+
+        # start websocket server
         websocketServer = await websockets.serve(logger=logger, host=wsAdress, port=wsAdressPort,ws_handler=wsHandeler, process_request=process_request,)
         
         websocketServerTask = asyncio.ensure_future(websocketServer.serve_forever())
@@ -160,7 +162,7 @@ async def startWebSocketServer(password, wsAdressPort,wsAdress):
     except Exception as e:
         logger.exception(f"Exception in websocket server: {e}")
 
-def runServerComms(password = "", wsAdressPort = 8765,wsAdress = None):
+def runServerComms(password = "", wsAdressPort = Config.websocket.websocketPort,wsAdress = None):
     global authorizedClients
     global clientsNames
     wsAdress = str(wsAdress)

@@ -4,6 +4,8 @@ import struct
 import time
 from client import runClient
 from commsServer import runServerComms
+from constants import Config
+from httpServer import runHTTPServer
 from modules.serviceAdvertisementServer import registerServiceAdvertisement
 import multiprocessing
 from modules.ipServices import getAllIps
@@ -38,12 +40,19 @@ def runServer():
         
         # start advertisement server in subprocess
         roomID=''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        advertisementServer = multiprocessing.Process(target=registerServiceAdvertisement, args=[username, passwordProtected,roomID, ip])
+       
+        advertisementServer = multiprocessing.Process(target=registerServiceAdvertisement, args=[username, passwordProtected,roomID, allIPs[userIpID]])
         advertisementServer.start()
         subprocesses.append(advertisementServer)
-        # start client in subprocess
         
-        serverProc = multiprocessing.Process(target=runServerComms, args=["" if password is None else password,8765,ip])
+        # start http server in subprocess
+        
+        httpServerProc = multiprocessing.Process(target=runHTTPServer,args=[ip])
+        httpServerProc.start()
+        subprocesses.append(httpServerProc)
+        # start wsServer in subprocess
+        
+        serverProc = multiprocessing.Process(target=runServerComms, args=["" if password is None else password,Config.websocket.websocketPort,ip])
         serverProc.start()
         subprocesses.append(serverProc)
         # start websocket server in main process

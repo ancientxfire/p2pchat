@@ -6,7 +6,11 @@ from time import sleep
 from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
 from modules.argParsService import Arguments
+import constants
+import logging
 
+logging.basicConfig(level=constants.Config.loggingLevel,format=constants.Config.loggingFormat)
+logger = logging.getLogger("serviceAdvertisementServer")
 
 def registerServiceAdvertisement(username,isPasswordProtected, roomID,ipAdress):
     
@@ -20,12 +24,12 @@ def registerServiceAdvertisement(username,isPasswordProtected, roomID,ipAdress):
         ip_version = IPVersion.V6Only
     else:
         ip_version = IPVersion.V4Only
-    
+    zeroconfType = constants.Config.zeroconf.zeroconfProtocol
     desc = {'username': username,'roomID':roomID, "passwordProtected":isPasswordProtected}
-    print("Registering service: "+roomID+"._pyChat._tcp.local.")
+    logger.info("Registering service: "+roomID+"."+zeroconfType)
     info = ServiceInfo(
-        "_pyChat._tcp.local.",
-        roomID+"._pyChat._tcp.local.",
+        zeroconfType,
+        roomID+"."+zeroconfType,
         addresses= [ipAdress],
         port=80,
         properties=desc,

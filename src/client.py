@@ -1,5 +1,6 @@
 import time
-from commsTestwsClient import runClientComms
+from commsClient import runClientComms
+from constants import Config
 from modules.serviceAdvertisementServer import registerServiceAdvertisement
 from modules.userChoice import userChoiceOne
 from modules.zeroconfServices import getServerIpAndInfo
@@ -25,7 +26,7 @@ def runClient( forceRoomID: str = None,  username: str = "", ip:str = None,roomP
         ip, userIpID = userChoiceOne(ips,"Choose an IP adress. If not shure, choose the first one.")
     elif len(ips) == 1:
         ip = ips[0]
-    wsURL = f"ws://{ip}:8765"
+    wsURL = f"ws://{ip}:{Config.websocket.websocketPort}"
     isPasswordProtected = True
     if "properties" in roomData.keys() and 'passwordProtected' in roomData["properties"].keys():
         isPasswordProtected = bool(roomData["properties"]['passwordProtected'])

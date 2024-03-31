@@ -1,6 +1,7 @@
 import asyncio
 import json
 from queue import Queue
+import ssl
 import threading
 import time
 from websockets.sync.client import connect
@@ -8,7 +9,8 @@ import uuid
 import logging
 
 from chatGUI import runClientChatGUI
-logging.basicConfig(level=logging.INFO)
+from constants import Config
+logging.basicConfig(level=Config.loggingLevel, format=Config.loggingFormat)
 logger = logging.getLogger("WS Client")
 
 def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.Event,messageQueue:Queue,newMessageRecivedEvent:threading.Event):
@@ -55,7 +57,6 @@ def runClientComms(wsURL:str, password:str, username:str):
             "Username": username,
             "UUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, username))
     }
-
     with connect(wsURL, additional_headers=extra_headers) as websocket:
         server_disconnected = threading.Event()
         messageQueueRecived = Queue()
