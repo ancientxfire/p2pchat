@@ -20,4 +20,4 @@ class Config:
     class httpServer:
         
         httpServerPort = 8766
-        pathToPublicCerts = ".\\src\\tlsKeys\\public"
+        pathToPublicCerts = ".\\src\\cryptoKeys\\server\\public"

@@ -19,7 +19,7 @@ def generate_self_signed_certificate_and_keys(cert_file, private_key_file, publi
     # Create a self-signed certificate
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'My Organization'),
-        x509.NameAttribute(NameOID.COMMON_NAME, '192.168.178.147')
+        x509.NameAttribute(NameOID.COMMON_NAME, 'My NAME')
     ])
 
     certificate_builder = x509.CertificateBuilder().subject_name(
@@ -70,7 +70,11 @@ def generate_self_signed_certificate_and_keys(cert_file, private_key_file, publi
     print(f'Certificate saved to {cert_file}')
 
 if __name__ == '__main__':
-    cert_file = 'certificate.pem'
-    private_key_file = 'private_key.pem'
-    public_key_file = 'public_key.pem'
-    generate_self_signed_certificate_and_keys(cert_file, private_key_file, public_key_file)
+    cert_file_server = '.\\src\\cryptoKeys\\server\\private\\certificate.pem'
+    private_key_file_server = '.\\src\\cryptoKeys\\server\\private\\private_key.pem'
+    public_key_file_server = '.\\src\\cryptoKeys\\server\\public\\public_key.pem'
+    generate_self_signed_certificate_and_keys(cert_file_server, private_key_file_server, public_key_file_server)
+    cert_file_client = '.\\src\\cryptoKeys\\client\\private\\certificate.pem'
+    private_key_file_client = '.\\src\\cryptoKeys\\client\\private\\private_key.pem'
+    public_key_file_client = '.\\src\\cryptoKeys\\client\\public\\public_key.pem'
+    generate_self_signed_certificate_and_keys(cert_file_client, private_key_file_client, public_key_file_client)
