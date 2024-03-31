@@ -1,3 +1,4 @@
+import os
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -5,6 +6,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.x509.oid import ExtensionOID, NameOID
 from datetime import datetime, timedelta
+
+from constants import Config
 
 def generate_self_signed_certificate_and_keys(cert_file, private_key_file, public_key_file):
     # Generate a private key
@@ -69,12 +72,29 @@ def generate_self_signed_certificate_and_keys(cert_file, private_key_file, publi
     print(f'Public key saved to {public_key_file}')
     print(f'Certificate saved to {cert_file}')
 
-if __name__ == '__main__':
-    cert_file_server = '.\\src\\cryptoKeys\\server\\private\\certificate.pem'
-    private_key_file_server = '.\\src\\cryptoKeys\\server\\private\\private_key.pem'
-    public_key_file_server = '.\\src\\cryptoKeys\\server\\public\\public_key.pem'
+def generateCertChainForServerAndClient():
+    cert_file_server = Config.crypto.cert_file_server
+    private_key_file_server = Config.crypto.private_key_file_server
+    public_key_file_server = Config.crypto.public_key_file_server
     generate_self_signed_certificate_and_keys(cert_file_server, private_key_file_server, public_key_file_server)
-    cert_file_client = '.\\src\\cryptoKeys\\client\\private\\certificate.pem'
-    private_key_file_client = '.\\src\\cryptoKeys\\client\\private\\private_key.pem'
-    public_key_file_client = '.\\src\\cryptoKeys\\client\\public\\public_key.pem'
+    cert_file_client = Config.crypto.cert_file_client
+    private_key_file_client = Config.crypto.private_key_file_client
+    public_key_file_client = Config.crypto.public_key_file_client
     generate_self_signed_certificate_and_keys(cert_file_client, private_key_file_client, public_key_file_client)
+
+def deleteCertChainForServerAndClient():
+    cert_file_server = Config.crypto.cert_file_server
+    private_key_file_server = Config.crypto.private_key_file_server
+    public_key_file_server = Config.crypto.public_key_file_server
+    cert_file_client = Config.crypto.cert_file_client
+    private_key_file_client = Config.crypto.private_key_file_client
+    public_key_file_client = Config.crypto.public_key_file_client
+    os.remove(cert_file_server)
+    os.remove(private_key_file_server)
+    os.remove(public_key_file_server)
+    os.remove(cert_file_client)
+    os.remove(private_key_file_client)
+    os.remove(public_key_file_client)
+
+if __name__ == '__main__':
+    generateCertChainForServerAndClient()

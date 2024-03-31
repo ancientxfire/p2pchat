@@ -30,7 +30,7 @@ class ChatApp:
         message = self.message_entry.get()
         if message.strip() != "":
             self.appendMessage(f"You: {message}")
-            self.messageQueueSend.put(message)
+            self.messageQueueSend.put({"type":"message","message":message})
             self.newMessageToSendEvent.set()
         else:
             messagebox.showwarning("Warning", "Please enter a message.")

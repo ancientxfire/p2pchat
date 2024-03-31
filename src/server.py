@@ -46,10 +46,10 @@ def runServer():
         subprocesses.append(advertisementServer)
         
         # start http server in subprocess
-        
-        httpServerProc = multiprocessing.Process(target=runHTTPServer,args=[ip])
-        httpServerProc.start()
-        subprocesses.append(httpServerProc)
+        # not longer needed but cept as a precaution
+        #httpServerProc = multiprocessing.Process(target=runHTTPServer,args=[ip])
+        #httpServerProc.start()
+        #subprocesses.append(httpServerProc)
         # start wsServer in subprocess
         
         serverProc = multiprocessing.Process(target=runServerComms, args=["" if password is None else password,Config.websocket.websocketPort,ip])
