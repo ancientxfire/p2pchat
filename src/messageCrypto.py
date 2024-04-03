@@ -48,8 +48,9 @@ def base64Decode(string: str):
 # Encrypt a message
 
 def encryptMessageWithPublicKey(message:str, public_key):
+    message = base64.urlsafe_b64encode(bytes(message,"utf-8"),)
     encrypted =  public_key.encrypt(
-        codecs.encode(message,"utf-8"),
+        message,
         padding.PKCS1v15()
     )
     print(encrypted)
@@ -75,6 +76,8 @@ def msgDecript(ciphertext:str, private_key):
         padding.PKCS1v15()
     )
     print(plaintext)
+    plaintext = base64.urlsafe_b64decode(str(plaintext,"utf-8"),)
+    
     return str(plaintext, "utf-8")
 
 
