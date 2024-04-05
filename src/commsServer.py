@@ -71,10 +71,12 @@ async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False):
             # send encrypted message
             messageJSON["type"] = type
             client_public_key = clientsPublicKeys[wsUUID]
+            print(messageCrypto.publicKeyToString(client_public_key))
             messageJSONStr = json.dumps(messageJSON)
             ciphertext = messageCrypto.encryptMessageWithPublicKey(messageJSONStr,client_public_key, )
-            messageJSONWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":messageCrypto.signMessageWithPrivateKey(messageJSONStr,server_private_key)}
-
+            signature = messageCrypto.signMessageWithPrivateKey(messageJSONStr,server_private_key)
+            messageJSONWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":signature}
+            print(messageCrypto.publicKeyToString(client_public_key))
             
             await websocket.send(json.dumps(messageJSONWithWrapper))
             logger.info(f"Sent encrypted {type} message to {wsUUID}")
@@ -82,12 +84,14 @@ async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False):
         logger.exception(f"Exception in websocket message sender: {e}")
 
 
+
+
 async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
     global clientsNames, clientsPublicKeys, adminClients
     wsUUID = ""
     isFirstMessage = True
     try:
-        authorizedClients.add(websocket)
+        authorizedClients.add((websocket, wsUUID))
         print( clientsNames)
         while True:
             msgWithWrapperStr = await websocket.recv()
@@ -100,6 +104,8 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
             if encrypted == True:
                 ciphertext = msgWithWrapper["ciphertext"]
                 client_public_key = clientsPublicKeys[wsUUID]
+                print(messageCrypto.publicKeyToString(client_public_key))
+                print(client_public_key)
                 cleartext = messageCrypto.msgDecript(ciphertext=ciphertext, private_key=server_private_key)
                 isValid = messageCrypto.verifySignature(cleartext,client_public_key, msgWithWrapper["signature"])
                 print(isValid)
@@ -138,7 +144,9 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                         break
                     
                     elif isFirstMessage == True:
+                        authorizedClients.remove((websocket, wsUUID))
                         wsUUID = msgDecoded["uuid"]
+                        authorizedClients.add((websocket, wsUUID))
                         logger.info("Recived init message from uuid: "+ wsUUID)
                         isFirstMessage = False
                         if not "public_key" in msgDecoded.keys():
@@ -202,14 +210,14 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                             match msgDecoded["type"]:
                                 case "message":
                                     logger.info(f"Broadcasting message from UUID: {wsUUID}")
-                                    for ws in authorizedClients:
+                                    for ws, ittUUID in authorizedClients:
                                         if ws != websocket:
                                             username = ""
                                             keysClientsNames = [k for k, v in clientsNames.items() if v == wsUUID]
                                             print(keysClientsNames)
 
                                             message = {"uuid": msgDecoded["uuid"], "message": msgDecoded["message"], "sender":keysClientsNames[0], } 
-                                            await sendMessage(ws, message,wsUUID,"message",True)
+                                            await sendMessage(ws, message,ittUUID,"message",True)
                                 case _:
                                     logger.error(f"Message from UUID: {wsUUID}, was rejected because of invalid type")
                                     await sendMessage(websocket, {"errorType":"Invalid Type", "message":"Invalid Type"},wsUUID,"error", True)
@@ -219,7 +227,7 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
     except Exception as e:
         logger.exception(f"Exception in websocket handler: {e}")
     finally:
-        authorizedClients.remove(websocket)
+        authorizedClients.remove((websocket, wsUUID))
         await websocket.close()
     
 

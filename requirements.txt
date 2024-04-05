@@ -1,7 +1,10 @@
 bottle==0.12.25
 cffi==1.16.0
 cryptography==42.0.5
+customtkinter==5.2.2
+darkdetect==0.8.0
 ifaddr==0.2.0
+packaging==24.0
 pycparser==2.22
 pymitter==0.5.0
 websockets==12.0
