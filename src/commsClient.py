@@ -14,7 +14,7 @@ logging.basicConfig(level=Config.loggingLevel, format=Config.loggingFormat)
 logger = logging.getLogger("WS Client")
 
 def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.Event,messageQueue:Queue,newMessageRecivedEvent:threading.Event):
-    global server_public_key
+    global server_public_key, shared_aes_key
     
     try:
         for messageWithWrapper in websocket:
@@ -26,9 +26,12 @@ def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.E
             
             if encrypted == True:
                 ciphertext = messageWithWrapper["ciphertext"]
-                
-                cleartext = messageCrypto.msgDecript(ciphertext=ciphertext, private_key=client_private_key)
-                isValid = messageCrypto.verifySignature(cleartext,server_public_key, messageWithWrapper["signature"])
+                if messageWithWrapper["encryptionType"] == "rsa":
+                    cleartext = messageCrypto.msgDecript(ciphertext=ciphertext, private_key=client_private_key)
+                    isValid = messageCrypto.verifySignature(cleartext,server_public_key, messageWithWrapper["signature"])
+                elif messageWithWrapper["encryptionType"] == "aes":
+                    cleartext = messageCrypto.aesCrypto.decrypt(ciphertext,shared_aes_key)
+                    isValid = True
                 print(isValid)
                 if isValid == False:
                     errorMessage = {"errorType":"Malformed", "message":"Invalid Signature recived by client","type":"error"}
@@ -45,10 +48,23 @@ def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.E
                         logger.exception("No public key found in init message, aborting")
                         break
                     server_public_key = messageCrypto.publicKeyFromString(message["public_key"])
+                    
+                    # init aes
+                    message = {"uuid": str(extra_headers["UUID"]), "type": "init_aes"}
+                    print(message)
+                    sendWsMessage(messageDict=message,webscoket=websocket,encrypted=True)
+                    
                 case "message":
                     newMessageRecivedEvent.set()
                     messageQueue.put(message)
                     print(f"{message["sender"]}: {message["message"]}")
+                case "init_aes":
+                    logger.info("init aes message was received")
+                    if not "aesKey" in message.keys():
+                        logger.exception("init aes message failed, not prrovided")
+                        break
+                    shared_aes_key = messageCrypto.base64Decode(message["aesKey"])
+                    print(b"aaaa     "+shared_aes_key)
                 case _:
                     print(message)
 
@@ -58,7 +74,6 @@ def messageReceive(websocket, extra_headers:dict,server_disconnected:threading.E
     finally:
         server_disconnected.set()
         
-
 def messageSendingLoop(websocket, extra_headers:dict, messageQueue:Queue,newMessageToSendEvent:threading.Event):
     global client_public_key
     try:
@@ -75,27 +90,40 @@ def messageSendingLoop(websocket, extra_headers:dict, messageQueue:Queue,newMess
             match message["type"]:
                 case "message":
                     message = {"message": message["message"], "messageUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, message["message"])), "uuid": str(extra_headers["UUID"]), "type": "message"}
-                    sendWsMessage(websocket, message, encrypted=True)
+                    sendWsMessage(websocket, message, encrypted=True, encryptionType="aes")
+
                 case _:
                     logger.error("Invalid message type: %s", message["type"])
-            
+
     except Exception as e:
         logger.exception(e)
-def sendWsMessage(webscoket, messageDict:dict, encrypted = False):
-    global server_public_key,client_private_key
+def sendWsMessage(webscoket, messageDict:dict, encrypted = False, encryptionType = "rsa"):
+    global server_public_key,client_private_key,shared_aes_key
     if encrypted == False:
         messageDictWithWrapper = {"encrypted": False, "message": messageDict}
         logger.info(messageDictWithWrapper)
         webscoket.send(json.dumps(messageDictWithWrapper))
     if encrypted == True:
         messageDictStr = json.dumps(messageDict)
-        ciphertext = messageCrypto.encryptMessageWithPublicKey(messageDictStr,server_public_key, )
-        messageDictWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":messageCrypto.signMessageWithPrivateKey(messageDictStr,client_private_key)}
-        print(messageDictWithWrapper)
-        logger.info(messageDictWithWrapper)
-        webscoket.send(json.dumps(messageDictWithWrapper))
+        if encryptionType == "rsa":
+            ciphertext = messageCrypto.encryptMessageWithPublicKey(messageDictStr,server_public_key, )
+            messageDictWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":messageCrypto.signMessageWithPrivateKey(messageDictStr,client_private_key), "encryptionType":encryptionType}
+            print(messageDictWithWrapper)
+            logger.info(messageDictWithWrapper)
+            webscoket.send(json.dumps(messageDictWithWrapper))
+        elif encryptionType == "aes":
+            print(b"bbbb     "+shared_aes_key)
+            
+            ciphertext = messageCrypto.aesCrypto.encrypt(messageDictStr, shared_aes_key)
+            logger.info(ciphertext)
+            messageDictWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":messageCrypto.signMessageWithPrivateKey(messageDictStr,client_private_key), "encryptionType":encryptionType}
+            print(messageDictWithWrapper)
+            logger.info(messageDictWithWrapper)
+            webscoket.send(json.dumps(messageDictWithWrapper))
 def runClientComms(wsURL:str, password:str, username:str):
-    global client_public_key,client_private_key
+    global client_public_key,client_private_key, shared_aes_key
+    shared_aes_key = None
+    #shared_aes_key = b'S2789l-d5kF-fUFu4Vj4P0dHtr5PBmnGmy6l0R9pQK0='
     client_private_key = messageCrypto.loadPrivateKey(Config.crypto.private_key_file_client)
     client_public_key = messageCrypto.loadPublicKey(Config.crypto.public_key_file_client)
     

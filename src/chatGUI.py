@@ -32,13 +32,15 @@ class ChatApp:
             self.appendMessage(f"You: {message}")
             self.messageQueueSend.put({"type":"message","message":message})
             self.newMessageToSendEvent.set()
+            self.message_entry.delete(0, tk.END)
         else:
             messagebox.showwarning("Warning", "Please enter a message.")
+        
     def appendMessage(self, message):
             self.message_area.config(state='normal')
             self.message_area.insert(tk.END, f"{message}\n")
             self.message_area.see(tk.END)
-            self.message_entry.delete(0, tk.END)
+            
             self.message_area.config(state='disabled')
 
 def on_quit():

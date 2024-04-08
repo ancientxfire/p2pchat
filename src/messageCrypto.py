@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from constants import Config
 from cryptography.hazmat.primitives import serialization
+from cryptography.fernet import Fernet
 import base64
 
 def loadPublicKey(path):
@@ -93,13 +94,37 @@ def verifySignature(plaintext:str, public_key, signature:str):
         return True
     except InvalidSignature:
         return False
-    
+
+class aesCrypto:
+    def encrypt(message:str, key:bytes):
+        messageBytes = bytes(message, "utf-16")
+        print(messageBytes)
+        print(key)
+        print(b"cccc     "+key)
+        try:
+            loaded_key = Fernet(key)
+            ciphertext = base64Encode(loaded_key.encrypt(messageBytes))
+            print(ciphertext)
+            return ciphertext
+        except Exception as e:
+            print(e)
+            return None
+    def decrypt(message:str, key):
+        try:
+            loaded_key = Fernet(key)
+            message = base64Decode(message)
+            return str(loaded_key.decrypt(message), "utf-16")
+        except Exception as e:
+            print(e)
+            return None
+    def generateKey():
+        return Fernet.generate_key()
 
 if __name__ == "__main__":
-    encoded = base64Encode(b"Testing")
+    key = b'S2789l-d5kF-fUFu4Vj4P0dHtr5PBmnGmy6l0R9pQK0='
+    print(key)
+    cyphertext = aesCrypto.encrypt("Message", key)
+    print(cyphertext)
     
-    print(encoded)
-    
-    decoded = base64Decode(encoded)
-    
-    print(decoded) 
+    cleatext = (aesCrypto.decrypt(cyphertext,key))
+    print(cleatext)

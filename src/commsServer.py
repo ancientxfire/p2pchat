@@ -57,7 +57,7 @@ async def process_request( path: str, request_headers: websockets.Headers):
         
 
 
-async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False):
+async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False , encryptionType = "rsa"):
     global clientsPublicKeys, server_private_key, server_public_key
     
     try:
@@ -70,13 +70,19 @@ async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False):
         if encrypted == True:
             # send encrypted message
             messageJSON["type"] = type
-            client_public_key = clientsPublicKeys[wsUUID]
-            print(messageCrypto.publicKeyToString(client_public_key))
             messageJSONStr = json.dumps(messageJSON)
-            ciphertext = messageCrypto.encryptMessageWithPublicKey(messageJSONStr,client_public_key, )
-            signature = messageCrypto.signMessageWithPrivateKey(messageJSONStr,server_private_key)
-            messageJSONWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":signature}
-            print(messageCrypto.publicKeyToString(client_public_key))
+            if encryptionType == "rsa":
+                client_public_key = clientsPublicKeys[wsUUID]
+                print(messageCrypto.publicKeyToString(client_public_key))
+                
+                ciphertext = messageCrypto.encryptMessageWithPublicKey(messageJSONStr,client_public_key, )
+                signature = messageCrypto.signMessageWithPrivateKey(messageJSONStr,server_private_key)
+                messageJSONWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext, "signature":signature,"encryptionType":encryptionType}
+            elif encryptionType == "aes":
+                ciphertext = messageCrypto.aesCrypto.encrypt(messageJSONStr,aesKey)
+                messageJSONWithWrapper = {"encrypted": True, "message": {}, "ciphertext": ciphertext,"encryptionType":encryptionType}
+
+            
             
             await websocket.send(json.dumps(messageJSONWithWrapper))
             logger.info(f"Sent encrypted {type} message to {wsUUID}")
@@ -87,7 +93,7 @@ async def sendMessage(websocket,messageJSON, wsUUID, type, encrypted = False):
 
 
 async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
-    global clientsNames, clientsPublicKeys, adminClients
+    global clientsNames, clientsPublicKeys, adminClients, aesKey
     wsUUID = ""
     isFirstMessage = True
     try:
@@ -103,12 +109,17 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
             
             if encrypted == True:
                 ciphertext = msgWithWrapper["ciphertext"]
-                client_public_key = clientsPublicKeys[wsUUID]
-                print(messageCrypto.publicKeyToString(client_public_key))
-                print(client_public_key)
-                cleartext = messageCrypto.msgDecript(ciphertext=ciphertext, private_key=server_private_key)
-                isValid = messageCrypto.verifySignature(cleartext,client_public_key, msgWithWrapper["signature"])
-                print(isValid)
+                if msgWithWrapper["encryptionType"] == "rsa":
+                    client_public_key = clientsPublicKeys[wsUUID]
+                    print(messageCrypto.publicKeyToString(client_public_key))
+                    print(client_public_key)
+                    cleartext = messageCrypto.msgDecript(ciphertext=ciphertext, private_key=server_private_key)
+                    isValid = messageCrypto.verifySignature(cleartext,client_public_key, msgWithWrapper["signature"])
+                    print(isValid)
+                elif msgWithWrapper["encryptionType"] == "aes":
+                    isValid = True
+                    cleartext = messageCrypto.aesCrypto.decrypt(ciphertext,aesKey)
+                    print(cleartext)
                 if isValid == False:
                     errorMessage = {"errorType":"Malformed", "message":"Invalid Signature"}
                     logger.error(errorMessage)
@@ -173,6 +184,12 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                     match msgDecoded["type"]:
                         case "init":
                             continue
+                        case "init_aes":
+                            # log end send error to client that only encrypted messages can be sent
+                            logger.error(f"Message from UUID: {wsUUID}, was rejected because the aes init was send non encrypted ")
+                            
+                            await sendMessage(websocket, {"errorType":"Not Encrypted", "message":"aes init can only be send encrypted"},wsUUID,"error")
+
                         case "message":
                             # log end send error to client that only encrypted messages can be sent
                             logger.error(f"Message from UUID: {wsUUID}, was rejected because the message was send non encrypted ")
@@ -217,11 +234,17 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                                             print(keysClientsNames)
 
                                             message = {"uuid": msgDecoded["uuid"], "message": msgDecoded["message"], "sender":keysClientsNames[0], } 
-                                            await sendMessage(ws, message,ittUUID,"message",True)
+                                            await sendMessage(ws, message,ittUUID,"message",True,encryptionType="aes")
+
                                 case _:
                                     logger.error(f"Message from UUID: {wsUUID}, was rejected because of invalid type")
                                     await sendMessage(websocket, {"errorType":"Invalid Type", "message":"Invalid Type"},wsUUID,"error", True)
-
+                        case "init_aes":
+                            print("init aes")
+                            logger.info("sending aes key to client")
+                            message = {"uuid": msgDecoded["uuid"], "aesKey":messageCrypto.base64Encode(aesKey) } 
+                            print(message)
+                            await sendMessage(websocket, message,wsUUID,"init_aes",True)
     except websockets.exceptions.ConnectionClosed:
         logger.info(f"Client disconnected: {websocket}")
     except Exception as e:
@@ -234,14 +257,17 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
 
 
 
-async def startWebSocketServer(password, wsAdressPort,wsAdress):
+async def startWebSocketServer(password, wsAdressPort,wsAdress, aesEncryptionKey = None):
     global wsPassword
     global server_public_key,server_private_key
+    global aesKey
     server_private_key = messageCrypto.loadPrivateKey(Config.crypto.private_key_file_server)
     server_public_key = messageCrypto.loadPublicKey(Config.crypto.public_key_file_server)
     wsPassword = password
-
-    
+    aesKey = aesEncryptionKey
+    if aesKey == None:
+        aesKey = messageCrypto.aesCrypto.generateKey()
+    #aesKey = b'S2789l-d5kF-fUFu4Vj4P0dHtr5PBmnGmy6l0R9pQK0='
     logger.info("Starting websocket server")
     try:
         if wsAdress == None:
@@ -278,4 +304,4 @@ def runServerComms(password = "", wsAdressPort = Config.websocket.websocketPort,
         event_loop.close()
 
 if __name__ == "__main__":
-    runServerComms(password="12345", wsAdress="localhost")
+    asyncio.run(startWebSocketServer(password="",wsAdress="localhost",wsAdressPort=8765))
