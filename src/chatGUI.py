@@ -68,5 +68,6 @@ def runClientChatGUI(username,server_disconnected:threading.Event,messageQueueRe
                 message = messageQueueRecived.get()
                 
                 app.appendMessage(f"{message["sender"]}: {message["message"]}")
-                
+                root.deiconify()
+                root.focus_force()
         newMessageRecivedEvent.clear()
