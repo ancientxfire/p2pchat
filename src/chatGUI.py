@@ -2,6 +2,8 @@ from queue import Queue
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
 import threading
+
+from modules.commandParser import parseCommand
 class ChatApp:
     def __init__(self, master,username:str,messageQueueRecived:Queue,messageQueueSend:Queue, newMessageRecivedEvent:threading.Event,newMessageToSendEvent:threading.Event):
         self.username = username
@@ -30,7 +32,11 @@ class ChatApp:
         message = self.message_entry.get()
         if message.strip() != "":
             self.appendMessage(f"You: {message}")
-            self.messageQueueSend.put({"type":"message","message":message})
+            command = parseCommand(message)
+            if command["isCommand"] == True:
+                self.messageQueueSend.put({"type":"command","command":command})
+            else:    
+                self.messageQueueSend.put({"type":"message","message":message})
             self.newMessageToSendEvent.set()
             self.message_entry.delete(0, tk.END)
         else:
@@ -66,8 +72,10 @@ def runClientChatGUI(username,server_disconnected:threading.Event,messageQueueRe
         if newMessageRecivedEvent.is_set():
             while messageQueueRecived.qsize() > 0:
                 message = messageQueueRecived.get()
-                
-                app.appendMessage(f"{message["sender"]}: {message["message"]}")
+                if "subtype" in message and message["subtype"] == "private":
+                    app.appendMessage(f"MSG from {message["sender"]}: {message["message"]}")
+                else:
+                    app.appendMessage(f"{message["sender"]}: {message["message"]}")
                 root.deiconify()
                 root.focus_force()
         newMessageRecivedEvent.clear()

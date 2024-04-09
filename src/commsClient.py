@@ -91,6 +91,10 @@ def messageSendingLoop(websocket, extra_headers:dict, messageQueue:Queue,newMess
                 case "message":
                     message = {"message": message["message"], "messageUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, message["message"])), "uuid": str(extra_headers["UUID"]), "type": "message"}
                     sendWsMessage(websocket, message, encrypted=True, encryptionType="aes")
+                case "command":
+                    
+                    message = {"message": message["command"], "messageUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, json.dumps(message["command"]))), "uuid": str(extra_headers["UUID"]), "type": "command"}
+                    sendWsMessage(websocket, message, encrypted=True, encryptionType="aes")
 
                 case _:
                     logger.error("Invalid message type: %s", message["type"])

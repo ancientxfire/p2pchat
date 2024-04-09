@@ -43,9 +43,6 @@ async def process_request( path: str, request_headers: websockets.Headers):
                 logger.info("REJECTED: Username already in use")
                 return [HTTPStatus.NOT_ACCEPTABLE, {"Content-Type": "text/plain"}, b"Username is already taken"]
         
-                  
-            
-            
             
             
         clientsNames[request_headers["username"]]=request_headers["uuid"]
@@ -178,7 +175,14 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                         welcomeMessageDict =  { "message":welcomeMessage,"messageUUID" :str(uuid.uuid5(uuid.NAMESPACE_DNS, welcomeMessage)),"public_key":server_public_key_str}
                         logger.info("Client initialized with uuid:"+wsUUID)
                         await sendMessage(websocket, welcomeMessageDict,wsUUID,"init")
-                        
+                        for ws, ittUUID in authorizedClients:
+                            if ws != websocket:
+                                username = ""
+                                keysClientsNames = [k for k, v in clientsNames.items() if v == wsUUID]
+                                print(keysClientsNames)
+                                message = {"uuid": msgDecoded["uuid"], "message": f"User {keysClientsNames[0]} joined", "sender":"server", } 
+                                await sendMessage(ws, message,ittUUID,"message",True,encryptionType="aes")
+
                         
                     
                     match msgDecoded["type"]:
@@ -245,6 +249,40 @@ async def wsHandeler(websocket: websockets.WebSocketClientProtocol, path):
                             message = {"uuid": msgDecoded["uuid"], "aesKey":messageCrypto.base64Encode(aesKey) } 
                             print(message)
                             await sendMessage(websocket, message,wsUUID,"init_aes",True)
+                        case "command":
+                            if str(msgDecoded["messageUUID"]) != str(uuid.uuid5(uuid.NAMESPACE_DNS, json.dumps(msgDecoded["message"]))):
+                                messageError = {"errorType":"Invalid UUID", "message":"UUID does not macht message UUID"}
+                                logger.error(f"Command from UUID: {wsUUID}, was rejected because of invalid UUID")
+                                await sendMessage(websocket, messageError,wsUUID,"error",True)
+                                continue
+                            logger.info(f"Command recieved from UUID: {wsUUID}")
+                            command = msgDecoded["message"]
+                            paramsLenght = len(command["params"])
+                            params = command["params"]
+                            commandName = command["command"]
+                            print(command)
+                            
+                            match command["command"]:
+                                case "msg":
+                                    if not paramsLenght > 0:
+                                        messageError = {"errorType":"invalid command", "message":"Missing parameters"}
+                                        logger.error(f"Command 'msg' from UUID: {wsUUID}, was rejected because of missing parameters")
+                                        await sendMessage(websocket, messageError, wsUUID, "error", True)
+                                        continue
+                                    messageToSend = " ".join(params[1:])
+                                    if not params[0] in clientsNames.keys():
+                                        # username not found
+                                        messageError = {"errorType":"invalid command", "message":"User not found"}
+                                        logger.error(f"Command 'msg' from UUID: {wsUUID}, was rejected because of invalid user")
+                                        await sendMessage(websocket, messageError, wsUUID, "error", True)
+                                        continue
+                                    reciverUUID = clientsNames[params[0]]
+                                    logger.info(f"Private message from UUID: {wsUUID} ",reciverUUID)
+                                    print(authorizedClients)
+                                    keysClientsNames = [k for k, v in clientsNames.items() if v == wsUUID]
+                                    reciverWS = [ws for ws,ittUUID in authorizedClients if ittUUID == reciverUUID][0]
+                                    privMessage = {"uuid": msgDecoded["uuid"], "message": messageToSend, "sender":keysClientsNames[0], "subtype":"private", } 
+                                    await sendMessage(reciverWS, privMessage, reciverUUID, "message",True)
     except websockets.exceptions.ConnectionClosed:
         logger.info(f"Client disconnected: {websocket}")
     except Exception as e:
